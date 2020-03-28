@@ -75,7 +75,7 @@ enum ARCH getFileArch(const char* szDllFile)
 
 enum ARCH getProcArch(const int pid)
 {
-    HANDLE hOpenProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, NULL, pid);
+    HANDLE hOpenProc = OpenProcess(PROCESS_QUERY_INFORMATION, NULL, pid);
     if (hOpenProc != NULL)
     {
         BOOL tempWow64 = FALSE;
@@ -116,16 +116,25 @@ int getProcSession(const int pid)
         }
     }
 	
+    
     HANDLE hTargetProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
 
-	PROCESS_SESSION_INFORMATION psi{ 0 };
-	NTSTATUS ntRet = p_NtQueryInformationProcess(hTargetProc, ProcessSessionInformation, &psi, sizeof(psi), nullptr);
-	if (NT_FAIL(ntRet))
-	{
-		return -1;
-	}
+    if (!hTargetProc)
+    {
+        return -1;
+    }
 
-	return (int)psi.SessionId;    
+    PROCESS_SESSION_INFORMATION psi{ 0 };
+    NTSTATUS ntRet = p_NtQueryInformationProcess(hTargetProc, ProcessSessionInformation, &psi, sizeof(psi), nullptr);
+
+    CloseHandle(hTargetProc);
+
+    if (NT_FAIL(ntRet))
+    {
+        return -1;
+    }
+
+    return (int)psi.SessionId;       
 }
 
 Process_Struct getProcessByName(const char* proc)
